@@ -1,0 +1,8 @@
+password = ""
+
+[aliyun]
+  [aliyun.mac2015]
+    AccessKeyID = "AccessKeyID"
+    AccessKeySecret = "AccessKeySecret"
+    Region = "cn-hangzhou"
+    Domains = ["test:sample.com"]
