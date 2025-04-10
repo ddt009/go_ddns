@@ -3,18 +3,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"golang.org/x/crypto/bcrypt"
+	"go_ddns/aliddns"
 	"log"
-	"my-go-dns/aliddns"
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Record structure definition
@@ -37,6 +37,7 @@ type AliyunHost struct {
 type Config struct {
 	Password string                `toml:"password" json:"password,omitempty"`
 	Aliyun   map[string]AliyunHost `toml:"aliyun" json:"aliyun,omitempty"`
+	BasePath string                `toml:"base_path" json:"base_path,omitempty"`
 }
 
 var (
@@ -44,14 +45,8 @@ var (
 	config     Config
 	cache      = make(map[string]Record)
 	mu         sync.Mutex
+	basePath   = "" // 基础路径，可通过环境变量设置
 )
-
-func varDump(v interface{}) {
-	val := reflect.ValueOf(v)
-	typ := reflect.TypeOf(v)
-	fmt.Printf("Type: %s\n", typ)
-	fmt.Printf("Value: %v\n", val)
-}
 
 // Load configuration
 func loadConfig() {
@@ -153,17 +148,17 @@ func cleanupExpiredRecords() {
 
 // Handle GET /
 func handleRoot(w http.ResponseWriter, r *http.Request) {
-	_, _ = fmt.Fprintf(w, getClientIP(r))
+	_, _ = fmt.Fprint(w, getClientIP(r))
 }
 
 // Handle GET /list
-func handleListGet(w http.ResponseWriter, r *http.Request) {
-	html := `<html><body>
-    <form action="/list" method="post">
+func handleListGet(w http.ResponseWriter, _ *http.Request) {
+	html := fmt.Sprintf(`<html><body>
+    <form action="%slist" method="post">
         Password: <input type="password" name="password">
         <input type="submit" value="Submit">
     </form>
-    </body></html>`
+    </body></html>`, basePath)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(html))
 }
@@ -175,7 +170,7 @@ func handleListPost(w http.ResponseWriter, r *http.Request) {
 
 	if !checkPassword(password) {
 		//_, _ = fmt.Fprintf(w, "Your IP: %s\n", getClientIP(r))
-		_, _ = fmt.Fprintf(w, getClientIP(r))
+		_, _ = fmt.Fprint(w, getClientIP(r))
 		return
 	}
 
@@ -290,14 +285,38 @@ func updateAliyunDNS(aliyunHost AliyunHost, domain, ipv6 string) {
 func main() {
 	loadConfig()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handlePost(w, r)
-		} else {
-			handleRoot(w, r)
+	// 从配置中获取基础路径
+	if config.BasePath != "" {
+		basePath = config.BasePath
+		if !strings.HasPrefix(basePath, "/") {
+			basePath = "/" + basePath
+		}
+		if !strings.HasSuffix(basePath, "/") {
+			basePath = basePath + "/"
+		}
+	}
+
+	// 环境变量可以覆盖配置文件
+	if path := os.Getenv("BASE_PATH"); path != "" {
+		basePath = path
+		if !strings.HasPrefix(basePath, "/") {
+			basePath = "/" + basePath
+		}
+		if !strings.HasSuffix(basePath, "/") {
+			basePath = basePath + "/"
+		}
+	}
+
+	http.HandleFunc(basePath, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == basePath || r.URL.Path == basePath[:len(basePath)-1] {
+			if r.Method == http.MethodPost {
+				handlePost(w, r)
+			} else {
+				handleRoot(w, r)
+			}
 		}
 	})
-	http.HandleFunc("/list", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc(basePath+"list", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleListGet(w, r)
 		} else if r.Method == http.MethodPost {
@@ -305,6 +324,6 @@ func main() {
 		}
 	})
 
-	log.Println("Server started: http://localhost:8080")
+	log.Printf("Server started: http://localhost:8080%s\n", basePath)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

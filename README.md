@@ -49,31 +49,7 @@ docker run --restart=always --name go-ddns -p 8080:8080 --log-opt max-size=1m -d
 docker run --restart=always --name go-ddns -p 8080:8080 -v ./config.toml:/app/config.toml --log-opt max-size=1m -d go-ddns
 ```
 
-## 以下为 windows 上报代码示例
-
-```
-@echo off
-rem windows下获取ipv6地址上报，保存为cmd文件并在计划任务里登记，注意window文件编码,错误时会识别不出中文的关键字"临时"
-rem 以下两个现要按需修改：YOUR-HOST-NAME和https://example.com/
-SETLOCAL ENABLEDELAYEDEXPANSION
-set host=YOUR-HOST-NAME
-set firstIPv6=0
-rem 中文环境里面是"临时"
-for /f "tokens=5 delims= " %%A in ('netsh interface ipv6 show addresses ^| findstr "临时"') do (
-set firstIPv6=%%A
-goto sendRequest
-)
-
-
-:sendRequest
-if "!firstIPv6!"=="0" (
-goto end
-)
-
-curl -X POST "https://example.com/" -H "Content-Type: application/json" -d "{ \"host\": \"!host!\", \"ipv6\": \"!firstIPv6!\" }"
-:end
-ENDLOCAL
-```
+## windows 上报代码参考reportv6.cmd
 
 1.  Windows11 下 计算机管理->系统工具->任务计划程序->创建任务(不是基本任务)
 2.  常规选项卡：填写名称(随意)/勾选不管用户是否登录都要运行/更改用户为 system
@@ -81,10 +57,11 @@ ENDLOCAL
 4.  操作：新建->启动程序/程序或脚本(浏览到脚本文件)
 5.  设置：去除勾选"如果任务超过以下时间，停止任务"
 
-## 以下为 linux 上报代码示例
+## linux ## windows 上报代码参考reportv6.sh
 
 ```
-# 在 crontab 里添加开机一次和每小时执行,注意修改 网卡名称 eth0/enp1s0 YOUR-HOST-NAME 和 https://example.com/
-@reboot  sleep 60 && ipv6=$(ip -6 addr show eth0 | grep -v deprecated | grep 'inet6 [^f:]' | awk -F' ' '{print $2}' | awk -F'/' '{print $1}' | tail -1); [ -z "$ipv6" ] || curl -s -X POST "https://example.com/" -H "Content-Type: application/json" -d "{\"host\": \"YOUR-HOST-NAME\",\"ipv6\":\"$ipv6\"}"
-0 * * * * ipv6=$(ip -6 addr show eth0 | grep -v deprecated | grep 'inet6 [^f:]' | awk -F' ' '{print $2}' | awk -F'/' '{print $1}' | tail -1); [ -z "$ipv6" ] || curl -s -X POST "https://example.com/" -H "Content-Type: application/json" -d "{\"host\": \"YOUR-HOST-NAME\",\"ipv6\":\"$ipv6\"}"
+# 在 crontab 里添加开机一次和每5分钟执行
+@reboot  sleep 60 && /bin/sh /root/reportipv6.sh
+*/5 * * * * /bin/sh /root/reportipv6.sh
+# 
 ```

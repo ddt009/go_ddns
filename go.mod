@@ -1,4 +1,4 @@
-module my-go-dns
+module go_ddns
 
 go 1.24.0
 

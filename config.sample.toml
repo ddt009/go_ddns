@@ -1,5 +1,5 @@
 password = ""
-
+base_path = ""
 [aliyun]
   [aliyun.mac2015]
     AccessKeyID = "AccessKeyID"
