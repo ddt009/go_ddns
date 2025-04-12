@@ -4,6 +4,7 @@ rem 以下两个现要按需修改：YOUR-HOST-NAME和https://example.com/
 rem 增加变量
 set REPORT_URL=https://example.com/
 set HOST_NAME=YOUR-HOST-NAME
+set CACHE_FILE=%temp%\.ipv6
 
 SETLOCAL ENABLEDELAYEDEXPANSION
 set firstIPv6=0
@@ -17,17 +18,17 @@ for /f "tokens=5 delims= " %%A in ('netsh interface ipv6 show addresses ^| finds
 if "!firstIPv6!"=="0" (
 goto end
 )
-if not exist .ipv6 (
-    type nul > .ipv6
+if not exist !CACHE_FILE! (
+    type nul > !CACHE_FILE!
 ) 
-set /p ipv6=<.ipv6
+set /p ipv6=<!CACHE_FILE!
 rem 移除可能存在的双引号
 set ipv6=!ipv6:"=!
 
 if "!firstIPv6!" neq "!ipv6!" (
-    echo !firstIPv6!>.ipv6
-    curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\": \"!HOST_NAME!\", \"ipv6\": \"!firstIPv6!\" }"
-    rem echo curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\": \"!HOST_NAME!\", \"ipv6\": \"!firstIPv6!\" }"
+    echo !firstIPv6!>!CACHE_FILE!
+    rem curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\": \"!HOST_NAME!\", \"ipv6\": \"!firstIPv6!\" }"
+    echo curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\": \"!HOST_NAME!\", \"ipv6\": \"!firstIPv6!\" }"
     goto end
 rem ) else (
 rem    echo skip
