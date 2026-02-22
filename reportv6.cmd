@@ -5,6 +5,7 @@ rem 增加变量
 set REPORT_URL=https://example.com/
 set HOST_NAME=YOUR-HOST-NAME
 set CACHE_FILE=%temp%\.ipv6
+set PASSWORD="YOUR-PASSWORD"
 
 SETLOCAL ENABLEDELAYEDEXPANSION
 set firstIPv6=0
@@ -27,8 +28,8 @@ set ipv6=!ipv6:"=!
 
 if "!firstIPv6!" neq "!ipv6!" (
     echo !firstIPv6!>!CACHE_FILE!
-    rem curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\": \"!HOST_NAME!\", \"ipv6\": \"!firstIPv6!\" }"
-    echo curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\": \"!HOST_NAME!\", \"ipv6\": \"!firstIPv6!\" }"
+    rem curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\":\"!HOST_NAME!\",\"ipv6\":\"!firstIPv6!\",\"p\":\"!PASSWORD!\" }"
+    echo curl -X POST "!REPORT_URL!" -H "Content-Type: application/json" -d "{ \"host\":\"!HOST_NAME!\",\"ipv6\":\"!firstIPv6!\",\"p\":\"!PASSWORD!\" }"
     goto end
 rem ) else (
 rem    echo skip

@@ -6,3 +6,4 @@ base_path = ""
     AccessKeySecret = "AccessKeySecret"
     Region = "cn-hangzhou"
     Domains = ["test:sample.com"]
+    Password = "node-password"

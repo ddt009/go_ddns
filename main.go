@@ -31,6 +31,7 @@ type AliyunHost struct {
 	AccessKeySecret string   `toml:"AccessKeySecret"`
 	Region          string   `toml:"Region"`
 	Domains         []string `toml:"Domains"`
+	Password        string   `toml:"Password"`
 }
 
 // Config structure for configuration file
@@ -203,7 +204,7 @@ func handleListPost(w http.ResponseWriter, r *http.Request) {
 
 // Handle POST /
 func handlePost(w http.ResponseWriter, r *http.Request) {
-	var host, ipv6, ipv4 string
+	var host, ipv6, ipv4, pass string
 
 	if r.Header.Get("Content-Type") == "application/json" {
 		// Parse JSON data
@@ -216,12 +217,14 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		host = data["host"]
 		ipv6 = data["ipv6"]
 		ipv4 = getClientIP(r)
+		pass = data["p"]
 	} else {
 		// Parse form data
 		_ = r.ParseForm()
 		host = r.FormValue("host")
 		ipv6 = r.FormValue("ipv6")
 		ipv4 = getClientIP(r)
+		pass = r.FormValue("p")
 	}
 
 	if len(host) > 16 || len(ipv6) > 39 {
@@ -244,17 +247,26 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update cache
-	cache[host] = Record{Host: host, IPv6: ipv6, IPv4: ipv4, At: time.Now().Unix()}
-
 	// Check if Aliyun DNS update is needed
 	aliyunHost, found := config.Aliyun[host]
 	if found {
+
+		if aliyunHost.Password != pass {
+			// _, _ = fmt.Fprintf(w, "Incorrect password")
+			return
+		}
+
+		// Update cache
+		cache[host] = Record{Host: host, IPv6: ipv6, IPv4: ipv4, At: time.Now().Unix()}
+
 		for _, domain := range aliyunHost.Domains {
+			// _, _ = fmt.Fprintf(w, "Go to updateAliyunDNS " + domain)
 			go updateAliyunDNS(aliyunHost, domain, ipv6)
 		}
 	}
-
+	// else {
+	//	_, _ = fmt.Fprintf(w, "domain not exist:" + host)
+	// }
 	//_, _ = fmt.Fprintf(w, "Submission successful")
 }
 
