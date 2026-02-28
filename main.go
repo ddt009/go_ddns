@@ -39,6 +39,7 @@ type Config struct {
 	Password string                `toml:"password" json:"password,omitempty"`
 	Aliyun   map[string]AliyunHost `toml:"aliyun" json:"aliyun,omitempty"`
 	BasePath string                `toml:"base_path" json:"base_path,omitempty"`
+	MaxCount int64                 `toml:"max_count" json:"max_count,omitempty"`
 }
 
 var (
@@ -260,13 +261,18 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		cache[host] = Record{Host: host, IPv6: ipv6, IPv4: ipv4, At: time.Now().Unix()}
 
 		for _, domain := range aliyunHost.Domains {
-			// _, _ = fmt.Fprintf(w, "Go to updateAliyunDNS " + domain)
+			// _, _ = fmt.Fprintf(w, "Go to updateAliyunDNS "+domain)
 			go updateAliyunDNS(aliyunHost, domain, ipv6)
 		}
+	} else {
+		// _, _ = fmt.Fprintf(w, "domain not exist:" + host)
+		if int64(len(cache)) < config.MaxCount {
+			// _, _ = fmt.Fprintf(w, "count: %d", len(cache))
+			cache[host] = Record{Host: host, IPv6: ipv6, IPv4: ipv4, At: time.Now().Unix()}
+		} /*else {
+			_, _ = fmt.Fprintf(w, "max: %d,count: %d", config.MaxCount, len(cache))
+		}*/
 	}
-	// else {
-	//	_, _ = fmt.Fprintf(w, "domain not exist:" + host)
-	// }
 	//_, _ = fmt.Fprintf(w, "Submission successful")
 }
 
